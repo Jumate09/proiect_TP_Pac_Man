@@ -1,22 +1,12 @@
-#include <stdio.h>
-#include <ncurses.h>
 #include "functii_proiect.h"
+#include <ncurses.h>
 
 int main(void)
-{ d
+{
+    //int i;
     initscr();
-    if(verificare_ecran(stdscr)==0)
-    {
-        int mx,my;
-        getmaxyx(stdscr,mx,my);
-        mvprintw(1,0,"Redimensioneaza ecranul maximele acuatle sunt %d %d",mx,my);
-        getch();
-        endwin();
-        return 0;
-    }
-    moving_key();
-
-
+    //i=strat_window();
+    singleplayer();
 
     endwin();
     return 0;
