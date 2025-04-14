@@ -26,6 +26,8 @@ void refresh_w(WINDOW* win)
     wrefresh(stdscr);
     wrefresh(win);
 }
+
+
 WINDOW* select_option(int i)
 {
     WINDOW* loc_win=newwin(30,60,0,0);
@@ -42,13 +44,22 @@ WINDOW* select_option(int i)
     wattroff(loc_win,A_REVERSE);
     return loc_win;
 }
+//==============
+//generare harta
+//==============
+
+
+
+
+//=========
 //movingkey
-WINDOW* moving_key(int x,int y)
+//=========
+void draw_player(WINDOW* win, int x, int y)
 {
-    WINDOW* loc_win=newwin(30,60,1,1);
-    box(loc_win,0,0);
-    mvwprintw(loc_win,x,y,"P");
-    return loc_win;
+    werase(win);
+    box(win, 0, 0);
+    mvwprintw(win, x, y, "P");
+    wrefresh(win);
 }
 void singleplayer()
 {
@@ -58,119 +69,29 @@ void singleplayer()
     WINDOW* screen2;
     screen2=newwin(30,60,0,0);
     box(screen2,0,0);
-    coord_t coord;
+    coord_t coord = {2, 2};
+    draw_player(screen2, coord.x, coord.y);
 
-    int ch=0,ch1=0;
-    wmove(screen2,2,2);
-    while(1)
+    int ch = 0, ch1 = 0;
+    while (1)   
     {
-        ch=getch();
-        if(ch!=-1)
-        {
-            ch1=ch;
-        }
-        if(ch=='q')
-        {
+        ch = getch();
+        if (ch != -1)
+            ch1 = ch;
+        if (ch == 'q')
             break;
-        }
-        switch(ch)
+
+        switch ((ch != -1) ? ch : ch1)
         {
-            case('w'):
-            {
-                getyx(screen2,coord.x,coord.y);
-                if(coord.x>2)
-                {
-                    screen2=moving_key(coord.x-1,coord.y-1);
+            case 'w': if (coord.x > 2) coord.x--; break;
+            case 'a': if (coord.y > 2) coord.y--; break;
+            case 's': if (coord.x < 28) coord.x++; break;
+            case 'd': if (coord.y < 58) coord.y++; break;
+        }
 
-                    refresh_w(screen2);
-                }
-
-                break;
-            }
-            case('a'):
-            {
-                getyx(screen2,coord.x,coord.y);
-                if(coord.y>2)
-                {
-                    screen2=moving_key(coord.x,coord.y-3);
-
-                    refresh_w(screen2);
-                }
-                break;
-            }
-            case('s'):
-            {
-                getyx(screen2,coord.x,coord.y);
-                if(coord.x<29)
-                {
-                    screen2=moving_key(coord.x+1,coord.y-1);
-                    refresh_w(screen2);
-                }
-
-                break;
-            }
-            case('d'):
-            {
-                getyx(screen2,coord.x,coord.y);
-                if(coord.y<59)
-                {
-                    screen2=moving_key(coord.x,coord.y+2);
-                    refresh_w(screen2);
-                }
-                break;
-            }
-            case(-1):
-            {
-                switch(ch1)
-                {
-                    case('w'):
-                    {
-                        getyx(screen2,coord.x,coord.y);
-                        if(coord.x>2)
-                        {
-                            screen2=moving_key(coord.x-1,coord.y-1);
-                            refresh_w(screen2);
-                        }
-
-                        break;
-                    }
-                    case('a'):
-                    {
-                        getyx(screen2,coord.x,coord.y);
-                        if(coord.y>2)
-                        {
-                            screen2=moving_key(coord.x,coord.y-3);
-                            refresh_w(screen2);
-                        }
-                        break;
-                    }
-                    case('s'):
-                    {
-                        getyx(screen2,coord.x,coord.y);
-                        if(coord.x<29)
-                        {
-                            screen2=moving_key(coord.x+1,coord.y-1);
-                            refresh_w(screen2);
-                        }
-
-                        break;
-                    }
-                    case('d'):
-                    {
-                        getyx(screen2,coord.x,coord.y);
-                        if(coord.y<59)
-                        {
-                            screen2=moving_key(coord.x,coord.y+1);
-                            refresh_w(screen2);
-                        }
-                        break;
-                    }
-                }  
-            }
-        }               
+        draw_player(screen2, coord.x, coord.y);
     }
     delwin(screen2);
-    
 }
 
 
@@ -198,13 +119,13 @@ int strat_window()
     box(screen1,0,0);
     screen1=select_option(0);
     refresh_w(screen1);
-    while((ch!='q')||(ch!='r'))
+    while((ch!='q')&&(ch!='r'))
     {
+        ch=getch();
         if(ch=='r')
         {
             break;
         }
-        ch=getch();
         switch(ch)
         {
             case KEY_DOWN:
@@ -214,12 +135,6 @@ int strat_window()
                     i++;
                     screen1=select_option(i);
                     refresh_w(screen1);
-                }
-                if(i==3)
-                {
-                    screen1=select_option(i);
-                    refresh_w(screen1);
-
                 }
                 break;
             }
@@ -234,22 +149,30 @@ int strat_window()
                 }
                 break;
             }
+            case 'r':
+            {
+                for(int i=0;i<31;i++)
+                {
+                    for(int j=0;j<61;j++)
+                    {
+                        mvwprintw(screen1,i,j," ");
+                    }
+                }
+                wrefresh(screen1);
+                delwin(screen1);
+                getch();
+                return i;
+                break;
+            }
             case 'q':
             {
                 delwin(screen1);
-
                 endwin();
                 exit(-1);
                 break;
             }
-            case 'r':
-            {
-            break;
-            }
         }
     }
-
-    delwin(screen1);
     return i;
 }
 

@@ -12,6 +12,6 @@ int strat_window();
 int verificare_ecran(WINDOW*);
 void refresh_w(WINDOW*);
 void singleplayer();
-WINDOW* moving_key(int,int);
+void draw_player(WINDOW*,int,int);
 
 #endif

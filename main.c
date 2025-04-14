@@ -3,10 +3,18 @@
 
 int main(void)
 {
-    //int i;
+    int i;
     initscr();
-    //i=strat_window();
-    singleplayer();
+    i=strat_window();
+    switch (i)
+    {
+        case 0:
+        {
+            singleplayer();
+            break;
+        }
+    }
+
 
     endwin();
     return 0;
