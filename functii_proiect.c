@@ -1,76 +1,270 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
+#include <time.h>
+
+#define ROWS 15
+#define COLLUMS 30
+#define MAP [ROWS][COLLUMS]
 
 typedef struct{
     int x;
     int y;
 }coord_t;
-char *alegere_screen1[]={"SINGLEPLAYER","MULTIPLAYER","LEADERBOARD","EXIT"};
-
-int verificare_ecran(WINDOW* win)
-{
-    int x,y;
-    getmaxyx(win,x,y);
-    if((x>=30)&&(y>=60))
-    {
-        printf("%d %d",x,y);
-        return 1;
-    }
-    //printf("%d %d",x,y);
-    return 0;
-}
-void refresh_w(WINDOW* win)
-{
-    wrefresh(stdscr);
-    wrefresh(win);
-}
 
 
-WINDOW* select_option(int i)
-{
-    WINDOW* loc_win=newwin(30,60,0,0);
-
-    mvwprintw(loc_win,1,15,"Press *q* to exit and r to enter");
-    mvwprintw(loc_win,3,23,alegere_screen1[0]);
-    mvwprintw(loc_win,4,23,alegere_screen1[1]);
-    mvwprintw(loc_win,5,23,alegere_screen1[2]);
-
-    box(loc_win,0,0);
-
-    wattron(loc_win,A_REVERSE);
-    mvwprintw(loc_win,i+3,23,alegere_screen1[i]);
-    wattroff(loc_win,A_REVERSE);
-    return loc_win;
-}
 //==============
 //generare harta
 //==============
 
+typedef int map_t[ROWS][COLLUMS];
 
+typedef struct{
+    WINDOW* screen;
+    map_t map;
+    int x;
+    int y;
+    int nr_puncte;
+}harta_t;
+
+typedef struct{
+    int prc_ziduri;
+    int prc_puncte;
+    int nr_fantome;
+}dificultate_t;
+
+int is_map_playable(map_t* loc_map)
+{
+    int start_row = -1, start_col = -1;
+    int open_space_value = ' '; 
+    int wall_value = '#';       
+
+    for (int i = 0; i < ROWS; i++)
+    {
+        for (int j = 0; j < COLLUMS; j++)
+        {
+            if ((*loc_map)[i][j] == open_space_value)
+            {
+                start_row = i;
+                start_col = j;
+                break;
+            }
+        }
+        if (start_row != -1)
+        {
+            break;
+        }
+    }
+
+    if (start_row == -1)
+    {
+        return -1;
+    }
+
+    int visited[ROWS][COLLUMS];
+    for (int i = 0; i < ROWS; i++)
+    {
+        for (int j = 0; j < COLLUMS; j++)
+        {
+            visited[i][j] = 0;
+        }
+    }
+
+    int queue[ROWS * COLLUMS * 2];
+    int head = 0, tail = 0;
+
+    queue[tail++] = start_row;
+    queue[tail++] = start_col;
+    visited[start_row][start_col] = 1;
+
+    int dr[] = {-1, 1, 0, 0};
+    int dc[] = {0, 0, -1, 1};
+    int nr,r,c,nc;
+    while (head < tail)
+    {
+        r = queue[head++];
+        c = queue[head++];
+
+        for (int i = 0; i < 4; i++)
+        {
+            nr = r + dr[i];
+            nc = c + dc[i];
+
+            if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLLUMS &&
+                (*loc_map)[nr][nc] == open_space_value && !visited[nr][nc])
+            {
+                visited[nr][nc] = 1;
+                queue[tail++] = nr;
+                queue[tail++] = nc;
+            }
+        }
+    }
+
+    for (int i = 0; i < ROWS; i++)
+    {
+        for (int j = 0; j < COLLUMS; j++)
+        {
+            if ((*loc_map)[i][j] == open_space_value && !visited[i][j])
+            {
+                return 0;
+            }
+        }
+    }
+
+    return 1;
+}
+void generare_harta(map_t* loc_map,dificultate_t dif)
+{
+    srand(time(NULL));
+    int random;
+    do
+    {
+
+    for (int i=0 ;i<ROWS ; i++)
+    {
+        for (int j=0 ;j<COLLUMS ;j++)
+        {
+            (*loc_map)[i][j]='#';
+        }
+    }
+    for (int i=1 ;i<ROWS-1 ; i++)
+    {
+        for (int j=1 ;j<COLLUMS-1 ;j++)
+        {
+            if((rand()%100)>dif.prc_ziduri)
+            {
+                (*loc_map)[i][j]=' ';
+                random=rand()%3;
+                if(random<0)
+                {
+                    random=-random;
+                }
+                if(i>ROWS/2)
+                {
+                    if(j<=COLLUMS/2)
+                    {
+                        for(int jj=j;jj<(COLLUMS-random-1);jj++)
+                        {
+                            (*loc_map)[i][jj]=' ';
+                        }
+                    }
+                    else
+                    {
+                        for(int ii=i;ii>1+(random);ii--)
+                        {
+                            (*loc_map)[ii][j]=' ';
+                        }
+                    }
+                }
+                else
+                {
+                    if(j>COLLUMS/2)
+                    {                       
+                        for(int jj=j;jj>1+(random);jj--)
+                        {
+                            (*loc_map)[i][jj]=' ';
+                        }
+                    }
+                    else
+                    {
+                        for(int ii=i;ii<(ROWS-random-1);ii++)
+                        {
+                            (*loc_map)[ii][j]=' ';
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    }while(is_map_playable(loc_map)!=1);
+    for(int i=1;i<ROWS-1;i++)
+    {
+        for(int j=1;j<COLLUMS-1;j++)
+        {
+            if((*loc_map)[i][j]==' ')
+            {
+                if((rand()%100)<dif.prc_puncte)
+                {
+                    (*loc_map)[i][j]='0';
+                }
+            }
+        }
+    }
+}
+
+void print_map(harta_t harta)
+{
+    for(int i=0;i<ROWS;i++)
+    {
+        for(int j=0;j<COLLUMS;j++)
+        {
+            mvwprintw(harta.screen,i,j,"%c",harta.map[i][j]);
+        }
+    }
+}
 
 
 //=========
 //movingkey
 //=========
-void draw_player(WINDOW* win, int x, int y)
+void draw_player(harta_t harta)
 {
-    werase(win);
-    box(win, 0, 0);
-    mvwprintw(win, x, y, "P");
-    wrefresh(win);
+    werase(harta.screen);
+    print_map(harta);
+    wrefresh(harta.screen);
+    mvwprintw(harta.screen, harta.x, harta.y, "P");
+    wrefresh(harta.screen);
+}
+void cauta_start(harta_t* harta_loc)
+{
+    (*harta_loc).x=-1;
+    for(int i=1;i<ROWS-1;i++)
+    {
+        for(int j=0;j<COLLUMS-1;j++)
+        {
+            if((*harta_loc).map[i][j]==' ')
+            {
+                (*harta_loc).x=i;
+                (*harta_loc).y=j;
+                break;
+            }
+        }
+        if((*harta_loc).x!=-1)
+        {
+            break;
+        }
+    }
+}
+int verificare_punt_sau_zid(harta_t* harta_loc)
+{
+    if((*harta_loc).map[(*harta_loc).x][(*harta_loc).y]=='#')
+    {
+        return 0;
+    }
+    if((*harta_loc).map[(*harta_loc).x][(*harta_loc).y]=='0')
+    {
+        return -1;
+    }
+    return 1;
 }
 void singleplayer()
 {
     cbreak();
     noecho();
-    halfdelay(1);
-    WINDOW* screen2;
-    screen2=newwin(30,60,0,0);
-    box(screen2,0,0);
-    coord_t coord = {2, 2};
-    draw_player(screen2, coord.x, coord.y);
+    halfdelay(3);
+    dificultate_t dificultate;
+    dificultate.prc_puncte=20;
+    dificultate.prc_ziduri=96;
+    dificultate.nr_fantome=2;
+    harta_t harta_loc;
+    harta_loc.nr_puncte=0;
+    generare_harta(&harta_loc.map,dificultate);
+    harta_loc.screen=newwin(ROWS,COLLUMS,0,0);
+    print_map(harta_loc);
+    cauta_start(&harta_loc);
+    printf("%d %d",harta_loc.x ,harta_loc.y);
+    draw_player(harta_loc);
 
     int ch = 0, ch1 = 0;
     while (1)   
@@ -83,15 +277,41 @@ void singleplayer()
 
         switch ((ch != -1) ? ch : ch1)
         {
-            case 'w': if (coord.x > 2) coord.x--; break;
-            case 'a': if (coord.y > 2) coord.y--; break;
-            case 's': if (coord.x < 28) coord.x++; break;
-            case 'd': if (coord.y < 58) coord.y++; break;
+            case 'w': if (harta_loc.x > 1) harta_loc.x--; break;
+            case 'a': if (harta_loc.y > 1) harta_loc.y--; break;
+            case 's': if (harta_loc.x < ROWS-2) harta_loc.x++; break;
+            case 'd': if (harta_loc.y < COLLUMS-2) harta_loc.y++; break;
         }
-
-        draw_player(screen2, coord.x, coord.y);
+        switch(verificare_punt_sau_zid(&harta_loc))
+        {
+            case 0:
+            {
+                werase(harta_loc.screen);
+                mvwprintw(harta_loc.screen,1,1,"joc terminat");
+                mvwprintw(harta_loc.screen,2,1,"ati acumulat %d puncte",harta_loc.nr_puncte);
+                wrefresh(harta_loc.screen);
+                nocbreak();
+                cbreak();
+                getch();
+                delwin(harta_loc.screen);
+                endwin();
+                exit(0);
+                break;
+            }
+            case -1:
+            {
+                harta_loc.nr_puncte++;
+                harta_loc.map[harta_loc.x][harta_loc.y]=' ';
+                break;
+            }
+            default :
+            {
+                break;
+            }
+        }
+        draw_player(harta_loc);
     }
-    delwin(screen2);
+    delwin(harta_loc.screen);
 }
 
 
@@ -99,6 +319,45 @@ void singleplayer()
 
 
 //ecran de inceput
+char *alegere_screen1[]={"SINGLEPLAYER","MULTIPLAYER","LEADERBOARD","EXIT"};
+
+
+int verificare_ecran(WINDOW* win)
+{
+    int x,y;
+    getmaxyx(win,x,y);
+    if((x>=ROWS)&&(y>=COLLUMS))
+    {
+        return 1;
+    }
+    return 0;
+}
+void refresh_w(WINDOW* win)
+{
+    wrefresh(stdscr);
+    wrefresh(win);
+}
+
+
+void select_option(int i,WINDOW* loc_win)
+{
+    werase(loc_win);
+
+    mvwprintw(loc_win,1,1,"Press *q* to exit");
+    mvwprintw(loc_win,2,1,"Press *r* to enter");
+    mvwprintw(loc_win,3,1,alegere_screen1[0]);
+    mvwprintw(loc_win,4,1,alegere_screen1[1]);
+    mvwprintw(loc_win,5,1,alegere_screen1[2]);
+
+    box(loc_win,0,0);
+
+    wattron(loc_win,A_REVERSE);
+    mvwprintw(loc_win,i+3,1,alegere_screen1[i]);
+    wattroff(loc_win,A_REVERSE);
+
+}
+
+
 int strat_window()
 {
     noecho();
@@ -113,67 +372,39 @@ int strat_window()
         endwin();
         exit(-1);
     }
-    WINDOW* screen1=newwin(30,60,0,0);
+    WINDOW* screen1=newwin(ROWS,COLLUMS,0,0);
     int ch,i=0;
 
-    box(screen1,0,0);
-    screen1=select_option(0);
+    select_option(0,screen1);
     refresh_w(screen1);
-    while((ch!='q')&&(ch!='r'))
+    while(1)
     {
         ch=getch();
         if(ch=='r')
         {
-            break;
+            return i;
         }
-        switch(ch)
+        if(ch=='q')
         {
-            case KEY_DOWN:
+            return -1;
+        }
+        if(ch==KEY_DOWN)
+        {
+            if(i!=2)
             {
-                if(i<2)
-                {
-                    i++;
-                    screen1=select_option(i);
-                    refresh_w(screen1);
-                }
-                break;
+                select_option(++i,screen1);
+                refresh_w(screen1);
             }
-            case KEY_UP:
+        }
+        if(ch==KEY_UP)
+        {
+            if(i!=0)
             {
-                if(i>0)
-                {
-                    i--;
-                    screen1=select_option(i);
-                    refresh_w(screen1);
-
-                }
-                break;
-            }
-            case 'r':
-            {
-                for(int i=0;i<31;i++)
-                {
-                    for(int j=0;j<61;j++)
-                    {
-                        mvwprintw(screen1,i,j," ");
-                    }
-                }
-                wrefresh(screen1);
-                delwin(screen1);
-                getch();
-                return i;
-                break;
-            }
-            case 'q':
-            {
-                delwin(screen1);
-                endwin();
-                exit(-1);
-                break;
+                select_option(--i,screen1);
+                refresh_w(screen1);
             }
         }
     }
-    return i;
 }
 
 

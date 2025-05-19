@@ -9,9 +9,16 @@ typedef struct{
 }coord_t;
 
 int strat_window();
-int verificare_ecran(WINDOW*);
-void refresh_w(WINDOW*);
+
 void singleplayer();
-void draw_player(WINDOW*,int,int);
+
+
+typedef int map_t[30][60];
+typedef struct{
+    int prc_ziduri;
+    int prc_puncte;
+    int nr_fantome;
+}dificultate_t;
+
 
 #endif
