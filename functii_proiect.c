@@ -6,11 +6,8 @@
 #define ROWS 15
 #define COLLUMS 30
 #define MAP [ROWS][COLLUMS]
+#define MAX_FANTOME 5
 
-typedef struct{
-    int x;
-    int y;
-}coord_t;
 
 
 //==============
@@ -20,11 +17,17 @@ typedef struct{
 typedef int map_t[ROWS][COLLUMS];
 
 typedef struct{
-    WINDOW* screen;
-    map_t map;
     int x;
     int y;
+}coord_t;
+
+typedef struct{
+    WINDOW* screen;
+    map_t map;
+    coord_t player;
+    coord_t fantomite[MAX_FANTOME];
     int nr_puncte;
+
 }harta_t;
 
 typedef struct{
@@ -115,7 +118,7 @@ int is_map_playable(map_t* loc_map)
 }
 void generare_harta(map_t* loc_map,dificultate_t dif)
 {
-    srand(time(NULL));
+
     int random;
     do
     {
@@ -208,51 +211,103 @@ void print_map(harta_t harta)
 //=========
 //movingkey
 //=========
-void draw_player(harta_t harta)
+void draw_player(harta_t harta,dificultate_t dif)
 {
     werase(harta.screen);
     print_map(harta);
     wrefresh(harta.screen);
-    mvwprintw(harta.screen, harta.x, harta.y, "P");
+    mvwprintw(harta.screen, harta.player.x, harta.player.y, "P");
+    for(int i=0;i<dif.nr_fantome;i++)
+        mvwprintw(harta.screen,harta.fantomite[i].x,harta.fantomite[i].y,"&");
     wrefresh(harta.screen);
 }
-void cauta_start(harta_t* harta_loc)
+void cauta_start(harta_t* harta_loc,dificultate_t dif)
 {
-    (*harta_loc).x=-1;
+    (*harta_loc).player.x=-1;
     for(int i=1;i<ROWS-1;i++)
     {
         for(int j=0;j<COLLUMS-1;j++)
         {
             if((*harta_loc).map[i][j]==' ')
             {
-                (*harta_loc).x=i;
-                (*harta_loc).y=j;
+                (*harta_loc).player.x=i;
+                (*harta_loc).player.y=j;
                 break;
             }
         }
-        if((*harta_loc).x!=-1)
+        if((*harta_loc).player.x!=-1)
         {
             break;
         }
     }
+    for(int i=0;i<dif.nr_fantome;i++)
+    {
+        (*harta_loc).fantomite[i].x=-1;
+        for(int x=ROWS-2;x>0;x--)
+        {
+            for(int y=COLLUMS-2;y>0;y--)
+            {
+                if((*harta_loc).map[x][y]==' ')
+                {
+                    (*harta_loc).map[x][y]='@';
+                    (*harta_loc).fantomite[i].x=x;
+                    (*harta_loc).fantomite[i].y=y;
+                    break;
+                }
+            }
+            if((*harta_loc).fantomite[i].x!=-1)
+            {
+                break;
+            }
+        }
+    }
+
 }
-int verificare_punt_sau_zid(harta_t* harta_loc)
+int verificare_coliziune(harta_t* harta_loc,dificultate_t dif)
 {
-    if((*harta_loc).map[(*harta_loc).x][(*harta_loc).y]=='#')
+    if((*harta_loc).map[(*harta_loc).player.x][(*harta_loc).player.y]=='#')
     {
         return 0;
     }
-    if((*harta_loc).map[(*harta_loc).x][(*harta_loc).y]=='0')
+    for(int i=0;i<dif.nr_fantome;i++)
+    {
+        if((harta_loc->player.x==harta_loc->fantomite[i].x)&&(harta_loc->player.y==harta_loc->fantomite[i].y))
+        {
+            return 0;
+        }
+    }
+    if((*harta_loc).map[(*harta_loc).player.x][(*harta_loc).player.y]=='@')
+    {
+        return -2;
+    }
+    if((*harta_loc).map[(*harta_loc).player.x][(*harta_loc).player.y]=='0')
     {
         return -1;
     }
     return 1;
 }
+void move_fantoma(harta_t* harta_loc,int i)
+{
+    int ch = rand()%4;
+    printf("%d ",ch);
+    if(ch<0)
+    {
+        ch=-ch;
+    }
+    switch (ch)
+    {
+        case 0: if (harta_loc->fantomite[i].x > 1) harta_loc->fantomite[i].x--; break;
+        case 1: if (harta_loc->fantomite[i].y > 1) harta_loc->fantomite[i].y--; break;
+        case 2: if (harta_loc->fantomite[i].x < ROWS-2) harta_loc->fantomite[i].x++; break;
+        case 3: if (harta_loc->fantomite[i].y < COLLUMS-2) harta_loc->fantomite[i].y++; break;
+    }
+    
+}
 void singleplayer()
 {
     cbreak();
     noecho();
-    halfdelay(3);
+    halfdelay(5);
     dificultate_t dificultate;
     dificultate.prc_puncte=20;
     dificultate.prc_ziduri=96;
@@ -262,11 +317,15 @@ void singleplayer()
     generare_harta(&harta_loc.map,dificultate);
     harta_loc.screen=newwin(ROWS,COLLUMS,0,0);
     print_map(harta_loc);
-    cauta_start(&harta_loc);
-    printf("%d %d",harta_loc.x ,harta_loc.y);
-    draw_player(harta_loc);
+    cauta_start(&harta_loc,dificultate);
+    printf("%d %d",harta_loc.player.x ,harta_loc.player.y);
+    draw_player(harta_loc,dificultate);
+    int ch = 0, ch1 = 0,N=0;
+    cbreak();
+    nodelay(harta_loc.screen, FALSE);
+    ch=getch();
+    halfdelay(3);
 
-    int ch = 0, ch1 = 0;
     while (1)   
     {
         ch = getch();
@@ -274,15 +333,15 @@ void singleplayer()
             ch1 = ch;
         if (ch == 'q')
             break;
-
+        
         switch ((ch != -1) ? ch : ch1)
         {
-            case 'w': if (harta_loc.x > 1) harta_loc.x--; break;
-            case 'a': if (harta_loc.y > 1) harta_loc.y--; break;
-            case 's': if (harta_loc.x < ROWS-2) harta_loc.x++; break;
-            case 'd': if (harta_loc.y < COLLUMS-2) harta_loc.y++; break;
+            case 'w': if (harta_loc.player.x > 1) harta_loc.player.x--; break;
+            case 'a': if (harta_loc.player.y > 1) harta_loc.player.y--; break;
+            case 's': if (harta_loc.player.x < ROWS-2) harta_loc.player.x++; break;
+            case 'd': if (harta_loc.player.y < COLLUMS-2) harta_loc.player.y++; break;
         }
-        switch(verificare_punt_sau_zid(&harta_loc))
+        switch(verificare_coliziune(&harta_loc,dificultate))
         {
             case 0:
             {
@@ -301,7 +360,13 @@ void singleplayer()
             case -1:
             {
                 harta_loc.nr_puncte++;
-                harta_loc.map[harta_loc.x][harta_loc.y]=' ';
+                harta_loc.map[harta_loc.player.x][harta_loc.player.y]=' ';
+                break;
+            }
+            case -2:
+            {
+                harta_loc.nr_puncte=harta_loc.nr_puncte+3;
+                harta_loc.map[harta_loc.player.x][harta_loc.player.y]=' ';
                 break;
             }
             default :
@@ -309,7 +374,19 @@ void singleplayer()
                 break;
             }
         }
-        draw_player(harta_loc);
+        draw_player(harta_loc,dificultate);
+        if(N==1)
+        {
+            N=0;
+        }
+        else
+        {
+            N=1;
+            for(int i=0;i<dificultate.nr_fantome;i++)
+            {
+                move_fantoma(&harta_loc,i);
+            }
+        }
     }
     delwin(harta_loc.screen);
 }
