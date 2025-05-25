@@ -307,7 +307,6 @@ void singleplayer()
 {
     cbreak();
     noecho();
-    halfdelay(5);
     dificultate_t dificultate;
     dificultate.prc_puncte=20;
     dificultate.prc_ziduri=96;
@@ -321,10 +320,8 @@ void singleplayer()
     printf("%d %d",harta_loc.player.x ,harta_loc.player.y);
     draw_player(harta_loc,dificultate);
     int ch = 0, ch1 = 0,N=0;
-    cbreak();
-    nodelay(harta_loc.screen, FALSE);
-    ch=getch();
-    halfdelay(3);
+
+    halfdelay(5);
 
     while (1)   
     {
@@ -482,6 +479,285 @@ int strat_window()
             }
         }
     }
+}
+//=============
+//MULTIPLAYER
+//=============
+
+void print_map_multiplayer(harta_t harta_p1,harta_t harta_p2)
+{
+    for(int i=0;i<ROWS;i++)
+    {
+        for(int j=0;j<COLLUMS;j++)
+        {
+            mvwprintw(harta_p1.screen,i,j,"%c",harta_p1.map[i][j]);
+            mvwprintw(harta_p2.screen,i,j,"%c",harta_p2.map[i][j]);
+
+        }
+    }
+}
+void init_harta_multiplayer(harta_t* harta_p1,harta_t* harta_p2,dificultate_t dif)
+{
+    harta_p1->nr_puncte=0;
+    harta_p2->nr_puncte=0;
+    generare_harta(&harta_p1->map,dif);
+    for(int i=0;i<ROWS;i++)
+    {
+        for(int j=0;j<COLLUMS;j++)
+        {
+            harta_p2->map[i][j]=harta_p1->map[i][j];
+        }
+    }
+    harta_p1->screen=newwin(ROWS,COLLUMS,0,0);
+    harta_p2->screen=newwin(ROWS,COLLUMS,0,COLLUMS+5);
+    cauta_start(harta_p1,dif);
+    cauta_start(harta_p2,dif);
+}
+
+void multiplayer()
+{
+    cbreak();
+    noecho();
+    keypad(stdscr,true);
+
+    dificultate_t dificultate;
+    dificultate.prc_puncte=20;
+    dificultate.prc_ziduri=96;
+    dificultate.nr_fantome=2;
+    harta_t harta_p1,harta_p2;
+    init_harta_multiplayer(&harta_p1,&harta_p2,dificultate);
+    print_map_multiplayer(harta_p1,harta_p2);
+    draw_player(harta_p1,dificultate);
+    draw_player(harta_p2,dificultate);
+    int ch=0,ch1=0,ch2=0,N=0;
+
+    halfdelay(5);
+
+    while (1)   
+    {
+        ch = getch();
+        if (ch == 'q')
+            break;
+        if(ch=='w'||ch=='a'||ch=='s'||ch=='d')
+        {
+            ch1=ch;
+            switch (ch)
+            {
+                case 'w': if (harta_p1.player.x > 1) harta_p1.player.x--; break;
+                case 'a': if (harta_p1.player.y > 1) harta_p1.player.y--; break;
+                case 's': if (harta_p1.player.x < ROWS-2) harta_p1.player.x++; break;
+                case 'd': if (harta_p1.player.y < COLLUMS-2) harta_p1.player.y++; break;
+            }
+            switch(verificare_coliziune(&harta_p1,dificultate))
+            {
+                case 0:
+                {
+                    werase(harta_p1.screen);
+                    mvwprintw(harta_p1.screen,1,1,"joc terminat");
+                    mvwprintw(harta_p1.screen,2,1,"ati acumulat %d puncte",harta_p1.nr_puncte);
+                    wrefresh(harta_p1.screen);
+                    delwin(harta_p1.screen);
+
+                    werase(harta_p2.screen);
+                    mvwprintw(harta_p2.screen,1,1,"joc terminat");
+                    mvwprintw(harta_p2.screen,2,1,"ati acumulat %d puncte",harta_p2.nr_puncte);
+                    wrefresh(harta_p2.screen);
+                    delwin(harta_p2.screen);
+
+                    nocbreak();
+                    cbreak();
+                    getch();
+                    endwin();
+                    exit(0);
+                    break;
+                }
+                case -1:
+                {
+                    harta_p1.nr_puncte++;
+                    harta_p1.map[harta_p1.player.x][harta_p1.player.y]=' ';
+                    break;
+                }
+                case -2:
+                {
+                    harta_p1.nr_puncte=harta_p1.nr_puncte+3;
+                    harta_p1.map[harta_p1.player.x][harta_p1.player.y]=' ';
+                    break;
+                }
+                default :
+                {
+                    break;
+                }
+            }
+        }
+        if(ch==KEY_UP||ch==KEY_DOWN||ch==KEY_LEFT||ch==KEY_RIGHT)
+        {
+            ch2=ch;
+            switch (ch)
+            {
+                case KEY_UP: if (harta_p2.player.x > 1) harta_p2.player.x--; break;
+                case KEY_LEFT: if (harta_p2.player.y > 1) harta_p2.player.y--; break;
+                case KEY_DOWN: if (harta_p2.player.x < ROWS-2) harta_p2.player.x++; break;
+                case KEY_RIGHT: if (harta_p2.player.y < COLLUMS-2) harta_p2.player.y++; break;
+            }
+            switch(verificare_coliziune(&harta_p2,dificultate))
+            {
+                case 0:
+                {
+                    werase(harta_p1.screen);
+                    mvwprintw(harta_p1.screen,1,1,"joc terminat");
+                    mvwprintw(harta_p1.screen,2,1,"ati acumulat %d puncte",harta_p1.nr_puncte);
+                    wrefresh(harta_p1.screen);
+                    delwin(harta_p1.screen);
+
+                    werase(harta_p2.screen);
+                    mvwprintw(harta_p2.screen,1,1,"joc terminat");
+                    mvwprintw(harta_p2.screen,2,1,"ati acumulat %d puncte",harta_p2.nr_puncte);
+                    wrefresh(harta_p2.screen);
+                    delwin(harta_p2.screen);
+
+                    nocbreak();
+                    cbreak();
+                    getch();
+                    endwin();
+                    exit(0);
+                    break;
+                }
+                case -1:
+                {
+                    harta_p2.nr_puncte++;
+                    harta_p2.map[harta_p2.player.x][harta_p2.player.y]=' ';
+                    break;
+                }
+                case -2:
+                {
+                    harta_p2.nr_puncte=harta_p2.nr_puncte+3;
+                    harta_p2.map[harta_p2.player.x][harta_p2.player.y]=' ';
+                    break;
+                }
+                default :
+                {
+                    break;
+                }
+            }
+        }
+        if(ch==-1)
+        {
+            switch (ch2)
+            {
+                case KEY_UP: if (harta_p2.player.x > 1) harta_p2.player.x--; break;
+                case KEY_LEFT: if (harta_p2.player.y > 1) harta_p2.player.y--; break;
+                case KEY_DOWN: if (harta_p2.player.x < ROWS-2) harta_p2.player.x++; break;
+                case KEY_RIGHT: if (harta_p2.player.y < COLLUMS-2) harta_p2.player.y++; break;
+            }
+            switch(verificare_coliziune(&harta_p2,dificultate))
+            {
+                case 0:
+                {
+                    werase(harta_p1.screen);
+                    mvwprintw(harta_p1.screen,1,1,"joc terminat");
+                    mvwprintw(harta_p1.screen,2,1,"ati acumulat %d puncte",harta_p1.nr_puncte);
+                    wrefresh(harta_p1.screen);
+                    delwin(harta_p1.screen);
+
+                    werase(harta_p2.screen);
+                    mvwprintw(harta_p2.screen,1,1,"joc terminat");
+                    mvwprintw(harta_p2.screen,2,1,"ati acumulat %d puncte",harta_p2.nr_puncte);
+                    wrefresh(harta_p2.screen);
+                    delwin(harta_p2.screen);
+
+                    nocbreak();
+                    cbreak();
+                    getch();
+                    endwin();
+                    exit(0);
+                    break;
+                }
+                case -1:
+                {
+                    harta_p2.nr_puncte++;
+                    harta_p2.map[harta_p2.player.x][harta_p2.player.y]=' ';
+                    break;
+                }
+                case -2:
+                {
+                    harta_p2.nr_puncte=harta_p2.nr_puncte+3;
+                    harta_p2.map[harta_p2.player.x][harta_p2.player.y]=' ';
+                    break;
+                }
+                default :
+                {
+                    break;
+                }
+            }
+            switch (ch1)
+            {
+                case 'w': if (harta_p1.player.x > 1) harta_p1.player.x--; break;
+                case 'a': if (harta_p1.player.y > 1) harta_p1.player.y--; break;
+                case 's': if (harta_p1.player.x < ROWS-2) harta_p1.player.x++; break;
+                case 'd': if (harta_p1.player.y < COLLUMS-2) harta_p1.player.y++; break;
+            }
+            switch(verificare_coliziune(&harta_p1,dificultate))
+            {
+                case 0:
+                {
+                    werase(harta_p1.screen);
+                    mvwprintw(harta_p1.screen,1,1,"joc terminat");
+                    mvwprintw(harta_p1.screen,2,1,"ati acumulat %d puncte",harta_p1.nr_puncte);
+                    wrefresh(harta_p1.screen);
+                    delwin(harta_p1.screen);
+
+                    werase(harta_p2.screen);
+                    mvwprintw(harta_p2.screen,1,1,"joc terminat");
+                    mvwprintw(harta_p2.screen,2,1,"ati acumulat %d puncte",harta_p2.nr_puncte);
+                    wrefresh(harta_p2.screen);
+                    delwin(harta_p2.screen);
+
+                    nocbreak();
+                    cbreak();
+                    getch();
+                    endwin();
+                    exit(0);
+                    break;
+                }
+                case -1:
+                {
+                    harta_p1.nr_puncte++;
+                    harta_p1.map[harta_p1.player.x][harta_p1.player.y]=' ';
+                    break;
+                }
+                case -2:
+                {
+                    harta_p1.nr_puncte=harta_p1.nr_puncte+3;
+                    harta_p1.map[harta_p1.player.x][harta_p1.player.y]=' ';
+                    break;
+                }
+                default :
+                {
+                    break;
+                }
+            }
+        }
+        draw_player(harta_p1,dificultate);
+        draw_player(harta_p2,dificultate);
+
+        if(N==1)
+        {
+            N=0;
+        }
+        else
+        {
+            N=1;
+            for(int i=0;i<dificultate.nr_fantome;i++)
+            {
+                move_fantoma(&harta_p1,i);
+                move_fantoma(&harta_p2,i);
+
+            }
+        }
+    }
+    delwin(harta_p1.screen);
+    delwin(harta_p2.screen);
+
 }
 
 

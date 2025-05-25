@@ -12,6 +12,7 @@ int strat_window();
 
 void singleplayer();
 
+void multiplayer();
 
 typedef int map_t[30][60];
 typedef struct{

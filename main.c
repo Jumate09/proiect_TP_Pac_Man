@@ -17,6 +17,11 @@ int main(void)
             singleplayer();
             break;
         }
+        case 1:
+        {
+            multiplayer();
+            break;
+        }
         default :
         {
             break;
