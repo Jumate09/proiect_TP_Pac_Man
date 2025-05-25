@@ -6,6 +6,10 @@
 int main(void)
 {
     int i;
+    dificultate_t dificultate;
+    dificultate.prc_puncte=20;
+    dificultate.prc_ziduri=96;
+    dificultate.nr_fantome=2;
     initscr();
     srand(time(NULL));
 
@@ -14,13 +18,17 @@ int main(void)
     {
         case 0:
         {
-            singleplayer();
+            singleplayer(dificultate);
             break;
         }
         case 1:
         {
-            multiplayer();
+            multiplayer(dificultate);
             break;
+        }
+        case 2:
+        {
+            leaderboard();
         }
         default :
         {

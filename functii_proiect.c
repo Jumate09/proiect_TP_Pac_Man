@@ -7,6 +7,7 @@
 #define COLLUMS 30
 #define MAP [ROWS][COLLUMS]
 #define MAX_FANTOME 5
+#define MAX_LEAD 15
 
 
 
@@ -303,14 +304,10 @@ void move_fantoma(harta_t* harta_loc,int i)
     }
     
 }
-void singleplayer()
+void singleplayer(dificultate_t dificultate)
 {
     cbreak();
     noecho();
-    dificultate_t dificultate;
-    dificultate.prc_puncte=20;
-    dificultate.prc_ziduri=96;
-    dificultate.nr_fantome=2;
     harta_t harta_loc;
     harta_loc.nr_puncte=0;
     generare_harta(&harta_loc.map,dificultate);
@@ -333,10 +330,10 @@ void singleplayer()
         
         switch ((ch != -1) ? ch : ch1)
         {
-            case 'w': if (harta_loc.player.x > 1) harta_loc.player.x--; break;
-            case 'a': if (harta_loc.player.y > 1) harta_loc.player.y--; break;
-            case 's': if (harta_loc.player.x < ROWS-2) harta_loc.player.x++; break;
-            case 'd': if (harta_loc.player.y < COLLUMS-2) harta_loc.player.y++; break;
+            case 'w':harta_loc.player.x--; break;
+            case 'a':harta_loc.player.y--; break;
+            case 's':harta_loc.player.x++; break;
+            case 'd':harta_loc.player.y++; break;
         }
         switch(verificare_coliziune(&harta_loc,dificultate))
         {
@@ -456,6 +453,8 @@ int strat_window()
         ch=getch();
         if(ch=='r')
         {
+            werase(screen1);
+            delwin(screen1);
             return i;
         }
         if(ch=='q')
@@ -514,16 +513,12 @@ void init_harta_multiplayer(harta_t* harta_p1,harta_t* harta_p2,dificultate_t di
     cauta_start(harta_p2,dif);
 }
 
-void multiplayer()
+void multiplayer(dificultate_t dificultate)
 {
     cbreak();
     noecho();
     keypad(stdscr,true);
 
-    dificultate_t dificultate;
-    dificultate.prc_puncte=20;
-    dificultate.prc_ziduri=96;
-    dificultate.nr_fantome=2;
     harta_t harta_p1,harta_p2;
     init_harta_multiplayer(&harta_p1,&harta_p2,dificultate);
     print_map_multiplayer(harta_p1,harta_p2);
@@ -543,10 +538,10 @@ void multiplayer()
             ch1=ch;
             switch (ch)
             {
-                case 'w': if (harta_p1.player.x > 1) harta_p1.player.x--; break;
-                case 'a': if (harta_p1.player.y > 1) harta_p1.player.y--; break;
-                case 's': if (harta_p1.player.x < ROWS-2) harta_p1.player.x++; break;
-                case 'd': if (harta_p1.player.y < COLLUMS-2) harta_p1.player.y++; break;
+                case 'w':harta_p1.player.x--; break;
+                case 'a':harta_p1.player.y--; break;
+                case 's':harta_p1.player.x++; break;
+                case 'd':harta_p1.player.y++; break;
             }
             switch(verificare_coliziune(&harta_p1,dificultate))
             {
@@ -554,7 +549,7 @@ void multiplayer()
                 {
                     werase(harta_p1.screen);
                     mvwprintw(harta_p1.screen,1,1,"joc terminat");
-                    mvwprintw(harta_p1.screen,2,1,"ati acumulat %d puncte",harta_p1.nr_puncte);
+                    mvwprintw(harta_p1.screen,2,1,"ati acumulat %d puncte",harta_p1.nr_puncte-10);
                     wrefresh(harta_p1.screen);
                     delwin(harta_p1.screen);
 
@@ -594,10 +589,10 @@ void multiplayer()
             ch2=ch;
             switch (ch)
             {
-                case KEY_UP: if (harta_p2.player.x > 1) harta_p2.player.x--; break;
-                case KEY_LEFT: if (harta_p2.player.y > 1) harta_p2.player.y--; break;
-                case KEY_DOWN: if (harta_p2.player.x < ROWS-2) harta_p2.player.x++; break;
-                case KEY_RIGHT: if (harta_p2.player.y < COLLUMS-2) harta_p2.player.y++; break;
+                case KEY_UP:harta_p2.player.x--; break;
+                case KEY_LEFT:harta_p2.player.y--; break;
+                case KEY_DOWN:harta_p2.player.x++; break;
+                case KEY_RIGHT:harta_p2.player.y++; break;
             }
             switch(verificare_coliziune(&harta_p2,dificultate))
             {
@@ -611,7 +606,7 @@ void multiplayer()
 
                     werase(harta_p2.screen);
                     mvwprintw(harta_p2.screen,1,1,"joc terminat");
-                    mvwprintw(harta_p2.screen,2,1,"ati acumulat %d puncte",harta_p2.nr_puncte);
+                    mvwprintw(harta_p2.screen,2,1,"ati acumulat %d puncte",harta_p2.nr_puncte-10);
                     wrefresh(harta_p2.screen);
                     delwin(harta_p2.screen);
 
@@ -644,10 +639,10 @@ void multiplayer()
         {
             switch (ch2)
             {
-                case KEY_UP: if (harta_p2.player.x > 1) harta_p2.player.x--; break;
-                case KEY_LEFT: if (harta_p2.player.y > 1) harta_p2.player.y--; break;
-                case KEY_DOWN: if (harta_p2.player.x < ROWS-2) harta_p2.player.x++; break;
-                case KEY_RIGHT: if (harta_p2.player.y < COLLUMS-2) harta_p2.player.y++; break;
+                case KEY_UP:harta_p2.player.x--; break;
+                case KEY_LEFT:harta_p2.player.y--; break;
+                case KEY_DOWN:harta_p2.player.x++; break;
+                case KEY_RIGHT:harta_p2.player.y++; break;
             }
             switch(verificare_coliziune(&harta_p2,dificultate))
             {
@@ -661,7 +656,7 @@ void multiplayer()
 
                     werase(harta_p2.screen);
                     mvwprintw(harta_p2.screen,1,1,"joc terminat");
-                    mvwprintw(harta_p2.screen,2,1,"ati acumulat %d puncte",harta_p2.nr_puncte);
+                    mvwprintw(harta_p2.screen,2,1,"ati acumulat %d puncte",harta_p2.nr_puncte-10);
                     wrefresh(harta_p2.screen);
                     delwin(harta_p2.screen);
 
@@ -691,10 +686,10 @@ void multiplayer()
             }
             switch (ch1)
             {
-                case 'w': if (harta_p1.player.x > 1) harta_p1.player.x--; break;
-                case 'a': if (harta_p1.player.y > 1) harta_p1.player.y--; break;
-                case 's': if (harta_p1.player.x < ROWS-2) harta_p1.player.x++; break;
-                case 'd': if (harta_p1.player.y < COLLUMS-2) harta_p1.player.y++; break;
+                case 'w':harta_p1.player.x--; break;
+                case 'a':harta_p1.player.y--; break;
+                case 's':harta_p1.player.x++; break;
+                case 'd':harta_p1.player.y++; break;
             }
             switch(verificare_coliziune(&harta_p1,dificultate))
             {
@@ -702,7 +697,7 @@ void multiplayer()
                 {
                     werase(harta_p1.screen);
                     mvwprintw(harta_p1.screen,1,1,"joc terminat");
-                    mvwprintw(harta_p1.screen,2,1,"ati acumulat %d puncte",harta_p1.nr_puncte);
+                    mvwprintw(harta_p1.screen,2,1,"ati acumulat %d puncte",harta_p1.nr_puncte-10);
                     wrefresh(harta_p1.screen);
                     delwin(harta_p1.screen);
 
@@ -757,7 +752,48 @@ void multiplayer()
     }
     delwin(harta_p1.screen);
     delwin(harta_p2.screen);
-
 }
 
+void leaderboard()
+{
+    WINDOW* screen1 = NULL; // Initialize to NULL
+    FILE* fin = NULL;       // Initialize to NULL
 
+    fin = fopen("/home/debian/codes/proiect_TP_Pac_Man_cu generare_proasta/leaderborad.txt", "r");
+    if (fin == NULL)
+    {
+        printf("Error opening leaderboard.txt\n");
+        return; // Exit if file opening fails.  No need to close or delete anything.
+    }
+
+    screen1 = newwin(ROWS, COLLUMS, 0, 0);
+    if (screen1 == NULL)
+    {
+        printf("Error creating window\n");
+        fclose(fin); // Close the file if window creation fails
+        return;      // Exit if window creation fails
+    }
+
+    char c;
+    int i = 1;
+    while (fscanf(fin, "%c", &c) ==1)
+    {
+        if (c == 10)
+        {
+            wprintw(screen1, "\n %d.", i);
+            i++;
+        }
+        else
+        {
+            wprintw(screen1, "%c", c);
+        }
+    }
+    box(screen1, 0, 0);
+    wrefresh(screen1);
+    getch(); // Wait for another key press
+
+    delwin(screen1); // Delete the window
+    fclose(fin);      // Close the file
+
+    return;
+}
