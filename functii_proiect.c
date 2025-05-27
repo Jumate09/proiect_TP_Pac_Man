@@ -1,13 +1,17 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #define ROWS 15
 #define COLLUMS 30
 #define MAP [ROWS][COLLUMS]
 #define MAX_FANTOME 5
-#define MAX_LEAD 15
+
+#define MAX_NUME_LEAD 10            
+#define MAX_LEADERBOARD_ENTRIES 15 
+#define LEADERBOARD_FILE_PATH "/home/debian/codes/proiect_TP_Pac_Man_cu generare_proasta/leaderboard.txt" 
 
 
 
@@ -36,6 +40,12 @@ typedef struct{
     int prc_puncte;
     int nr_fantome;
 }dificultate_t;
+
+typedef struct
+{
+    char nume[MAX_NUME_LEAD + 1];
+    int pct;
+} leaderboard_t;
 
 int is_map_playable(map_t* loc_map)
 {
@@ -207,8 +217,198 @@ void print_map(harta_t harta)
         }
     }
 }
+//=====================
+//entering leaderboard
+//=====================
 
 
+int compareLeaderboardEntries(const void* a, const void* b)
+{
+    const leaderboard_t* entryA = (const leaderboard_t*)a;
+    const leaderboard_t* entryB = (const leaderboard_t*)b;
+    return entryB->pct - entryA->pct;
+}
+
+int load_leaderboard(leaderboard_t leaderboard[], int* num_entries)
+{
+    FILE* fio = fopen(LEADERBOARD_FILE_PATH, "r");
+    if (fio == NULL)
+    {
+        *num_entries = 0;
+        return 0;
+    }
+
+    *num_entries = 0;
+    while (*num_entries < MAX_LEADERBOARD_ENTRIES && fscanf(fio, "%d %10s\n", &leaderboard[*num_entries].pct, leaderboard[*num_entries].nume) == 2)
+    {
+        (*num_entries)++;
+    }
+
+    fclose(fio);
+    return 0;
+}
+
+int save_leaderboard(const leaderboard_t leaderboard[], int num_entries)
+{
+    FILE* fio = fopen(LEADERBOARD_FILE_PATH, "w");
+    if (fio == NULL)
+    {
+        return -1;
+    }
+
+    for (int i = 0; i < num_entries; i++)
+    {
+        fprintf(fio, "%d %s\n", leaderboard[i].pct, leaderboard[i].nume);
+    }
+
+    fclose(fio);
+    return 0;
+}
+
+int add_to_leaderboard(leaderboard_t leaderboard[], int* num_entries, const leaderboard_t* new_player)
+{
+    if (*num_entries == MAX_LEADERBOARD_ENTRIES && new_player->pct <= leaderboard[MAX_LEADERBOARD_ENTRIES - 1].pct)
+    {
+        return 1;
+    }
+
+    if (*num_entries < MAX_LEADERBOARD_ENTRIES)
+    {
+        leaderboard[*num_entries] = *new_player;
+        (*num_entries)++;
+    }
+    else
+    {
+        leaderboard[MAX_LEADERBOARD_ENTRIES - 1] = *new_player;
+    }
+
+    qsort(leaderboard, *num_entries, sizeof(leaderboard_t), compareLeaderboardEntries);
+
+    if (*num_entries > MAX_LEADERBOARD_ENTRIES)
+    {
+        *num_entries = MAX_LEADERBOARD_ENTRIES;
+    }
+
+    return 0;
+}
+
+void ecran_lead(harta_t* harta, leaderboard_t* lead_player)
+{
+    werase(harta->screen);
+    mvwprintw(harta->screen, 1, 1, "Enter your name(max %d chars):", MAX_NUME_LEAD);
+    mvwprintw(harta->screen, 4, 1, "Your score: %d", harta->nr_puncte);
+    mvwprintw(harta->screen, 3, 1, "Press ENTER to finish.");
+    wmove(harta->screen, 2, 1);
+
+    wrefresh(harta->screen);
+
+    lead_player->pct = harta->nr_puncte;
+    memset(lead_player->nume, 0, sizeof(lead_player->nume));
+
+    int i = 0;
+    int ch;
+
+    keypad(harta->screen, TRUE);
+    noecho();
+    cbreak();
+
+    while (i < MAX_NUME_LEAD)
+    {
+        ch = wgetch(harta->screen);
+
+        if (ch == ERR)
+        {
+            continue;
+        }
+        else if (ch == '\n' || ch == KEY_ENTER)
+        {
+            break;
+        }
+        else if ((ch == KEY_BACKSPACE || ch == 127 || ch == '\b'))
+        {
+            if (i > 0)
+            {
+                i--;
+                mvwdelch(harta->screen, 5, 1 + i);
+                wrefresh(harta->screen);
+            }
+        }
+        else if (ch >= 32 && ch <= 126)
+        {
+            lead_player->nume[i] = (char)ch;
+            mvwaddch(harta->screen, 5, 1 + i, (char)ch);
+            wrefresh(harta->screen);
+            i++;
+        }
+    }
+    lead_player->nume[i] = '\0';
+
+    echo();
+    nocbreak();
+    keypad(harta->screen, FALSE);
+}
+
+void display_leaderboard(WINDOW*screen, const leaderboard_t leaderboard[], int num_entries)
+{
+    werase(screen);
+    mvwprintw(screen, 1, 1, "--- LEADERBOARD ---");
+    mvwprintw(screen, 2, 1, "RANK   SCORE   NAME");
+
+    for (int i = 0; i < num_entries; i++)
+    {
+        mvwprintw(screen, 4 + i, 1, "%-4d   %-6d  %s", i + 1, leaderboard[i].pct, leaderboard[i].nume);
+    }
+
+    mvwprintw(screen, 4 + num_entries + 2, 1, "Press any key to continue...");
+    wrefresh(screen);
+    noecho();
+    cbreak();
+    getch();
+}
+
+int enter_leaderboard(harta_t* harta)
+{
+    leaderboard_t current_leaderboard[MAX_LEADERBOARD_ENTRIES];
+    int num_entries = 0;
+    leaderboard_t new_player_entry;
+
+    if (load_leaderboard(current_leaderboard, &num_entries) != 0)
+    {
+        werase(harta->screen);
+        mvwprintw(harta->screen, 5, 1, "Error loading leaderboard!");
+        mvwprintw(harta->screen, 7, 1, "Press any key to continue...");
+        wrefresh(harta->screen);
+        wgetch(harta->screen);
+        return -1;
+    }
+
+    ecran_lead(harta, &new_player_entry);
+
+    int add_status = add_to_leaderboard(current_leaderboard, &num_entries, &new_player_entry);
+
+    if (add_status == 1)
+    {
+        werase(harta->screen);
+        mvwprintw(harta->screen, 5, 1, "Your score of %d was too low to enter the leaderboard.", new_player_entry.pct);
+        mvwprintw(harta->screen, 7, 1, "Press any key to continue...");
+        wrefresh(harta->screen);
+        wgetch(harta->screen);
+    }
+
+    if (save_leaderboard(current_leaderboard, num_entries) != 0)
+    {
+        werase(harta->screen);
+        box(harta->screen, 0, 0);
+        mvwprintw(harta->screen, 5, 1, "Error saving leaderboard!");
+        mvwprintw(harta->screen, 7, 1, "Press any key to continue...");
+        wrefresh(harta->screen);
+        wgetch(harta->screen);
+        return -1;
+    }
+    display_leaderboard(harta->screen, current_leaderboard, num_entries);
+
+    return 0;
+}
 //=========
 //movingkey
 //=========
@@ -290,7 +490,6 @@ int verificare_coliziune(harta_t* harta_loc,dificultate_t dif)
 void move_fantoma(harta_t* harta_loc,int i)
 {
     int ch = rand()%4;
-    printf("%d ",ch);
     if(ch<0)
     {
         ch=-ch;
@@ -314,7 +513,6 @@ void singleplayer(dificultate_t dificultate)
     harta_loc.screen=newwin(ROWS,COLLUMS,0,0);
     print_map(harta_loc);
     cauta_start(&harta_loc,dificultate);
-    printf("%d %d",harta_loc.player.x ,harta_loc.player.y);
     draw_player(harta_loc,dificultate);
     int ch = 0, ch1 = 0,N=0;
 
@@ -339,13 +537,21 @@ void singleplayer(dificultate_t dificultate)
         {
             case 0:
             {
+                cbreak();
+                echo();
+                
                 werase(harta_loc.screen);
                 mvwprintw(harta_loc.screen,1,1,"joc terminat");
                 mvwprintw(harta_loc.screen,2,1,"ati acumulat %d puncte",harta_loc.nr_puncte);
+                mvwprintw(harta_loc.screen,3,1,"*r* pt leaderboard");
                 wrefresh(harta_loc.screen);
-                nocbreak();
-                cbreak();
-                getch();
+
+                if(getch()=='r')
+                {
+                    werase(harta_loc.screen);
+                    wrefresh(harta_loc.screen);
+                    enter_leaderboard(&harta_loc);
+                }
                 delwin(harta_loc.screen);
                 endwin();
                 exit(0);
@@ -403,12 +609,6 @@ int verificare_ecran(WINDOW* win)
     }
     return 0;
 }
-void refresh_w(WINDOW* win)
-{
-    wrefresh(stdscr);
-    wrefresh(win);
-}
-
 
 void select_option(int i,WINDOW* loc_win)
 {
@@ -425,6 +625,7 @@ void select_option(int i,WINDOW* loc_win)
     wattron(loc_win,A_REVERSE);
     mvwprintw(loc_win,i+3,1,alegere_screen1[i]);
     wattroff(loc_win,A_REVERSE);
+    wrefresh(loc_win);
 
 }
 
@@ -435,7 +636,7 @@ int strat_window()
     curs_set(FALSE);
     keypad(stdscr,TRUE);
 
-    if(verificare_ecran(stdscr)==0)
+    if(verificare_ecran(stdscr)==0) 
     {
         mvwprintw(stdscr,0,0,"ECRAN PREA MIC");
         wrefresh(stdscr);
@@ -447,18 +648,23 @@ int strat_window()
     int ch,i=0;
 
     select_option(0,screen1);
-    refresh_w(screen1);
+    wrefresh(stdscr);
+    wrefresh(screen1);
     while(1)
     {
         ch=getch();
         if(ch=='r')
         {
             werase(screen1);
+            wrefresh(screen1);
             delwin(screen1);
             return i;
         }
         if(ch=='q')
         {
+            werase(screen1);
+            wrefresh(screen1);
+            delwin(screen1);
             return -1;
         }
         if(ch==KEY_DOWN)
@@ -466,7 +672,6 @@ int strat_window()
             if(i!=2)
             {
                 select_option(++i,screen1);
-                refresh_w(screen1);
             }
         }
         if(ch==KEY_UP)
@@ -474,7 +679,6 @@ int strat_window()
             if(i!=0)
             {
                 select_option(--i,screen1);
-                refresh_w(screen1);
             }
         }
     }
@@ -750,50 +954,31 @@ void multiplayer(dificultate_t dificultate)
             }
         }
     }
+    werase(harta_p1.screen);
+    werase(harta_p2.screen);
+    wrefresh(harta_p1.screen);
+    wrefresh(harta_p2.screen);
     delwin(harta_p1.screen);
     delwin(harta_p2.screen);
 }
 
 void leaderboard()
 {
-    WINDOW* screen1 = NULL; // Initialize to NULL
-    FILE* fin = NULL;       // Initialize to NULL
+    WINDOW* screen = newwin(ROWS,COLLUMS,0,0); 
 
-    fin = fopen("/home/debian/codes/proiect_TP_Pac_Man_cu generare_proasta/leaderborad.txt", "r");
-    if (fin == NULL)
+    leaderboard_t current_leaderboard[MAX_LEADERBOARD_ENTRIES];
+    int num_entries = 0;
+
+    if (load_leaderboard(current_leaderboard, &num_entries) != 0)
     {
-        printf("Error opening leaderboard.txt\n");
-        return; // Exit if file opening fails.  No need to close or delete anything.
+        werase(screen);
+        mvwprintw(screen, 5, 1, "Error loading leaderboard!");
+        mvwprintw(screen, 7, 1, "Press any key to continue...");
+        wrefresh(screen);
+        wgetch(screen);
+        return ;
     }
-
-    screen1 = newwin(ROWS, COLLUMS, 0, 0);
-    if (screen1 == NULL)
-    {
-        printf("Error creating window\n");
-        fclose(fin); // Close the file if window creation fails
-        return;      // Exit if window creation fails
-    }
-
-    char c;
-    int i = 1;
-    while (fscanf(fin, "%c", &c) ==1)
-    {
-        if (c == 10)
-        {
-            wprintw(screen1, "\n %d.", i);
-            i++;
-        }
-        else
-        {
-            wprintw(screen1, "%c", c);
-        }
-    }
-    box(screen1, 0, 0);
-    wrefresh(screen1);
-    getch(); // Wait for another key press
-
-    delwin(screen1); // Delete the window
-    fclose(fin);      // Close the file
+    display_leaderboard(screen, current_leaderboard, num_entries);
 
     return;
-}
+}   

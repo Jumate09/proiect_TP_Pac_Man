@@ -18,6 +18,7 @@ int main(void)
     {
         case 0:
         {
+            select_dificulty(&dificultate);
             singleplayer(dificultate);
             break;
         }

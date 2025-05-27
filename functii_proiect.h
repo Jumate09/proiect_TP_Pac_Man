@@ -21,6 +21,8 @@ void multiplayer(dificultate_t );
 
 void leaderboard();
 
+void select_dificulty(dificultate_t* );
+
 
 typedef int map_t[30][60];
 
