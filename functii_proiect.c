@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #define ROWS 15
 #define COLLUMS 30
@@ -11,7 +12,7 @@
 
 #define MAX_NUME_LEAD 10            
 #define MAX_LEADERBOARD_ENTRIES 15 
-#define LEADERBOARD_FILE_PATH "/home/debian/codes/proiect_TP_Pac_Man_cu generare_proasta/leaderboard.txt" 
+#define LEADERBOARD_FILE_PATH "/home/debian/codes/proiect_TP_Pac_Man/leaderboard.txt" 
 
 
 
@@ -298,7 +299,7 @@ void ecran_lead(harta_t* harta, leaderboard_t* lead_player)
     mvwprintw(harta->screen, 1, 1, "Enter your name(max %d chars):", MAX_NUME_LEAD);
     mvwprintw(harta->screen, 4, 1, "Your score: %d", harta->nr_puncte);
     mvwprintw(harta->screen, 3, 1, "Press ENTER to finish.");
-    wmove(harta->screen, 2, 1);
+    wmove(harta->screen, 5, 1);
 
     wrefresh(harta->screen);
 
@@ -545,7 +546,7 @@ void singleplayer(dificultate_t dificultate)
                 mvwprintw(harta_loc.screen,2,1,"ati acumulat %d puncte",harta_loc.nr_puncte);
                 mvwprintw(harta_loc.screen,3,1,"*r* pt leaderboard");
                 wrefresh(harta_loc.screen);
-
+                sleep(2);
                 if(getch()=='r')
                 {
                     werase(harta_loc.screen);
@@ -648,7 +649,6 @@ int strat_window()
     int ch,i=0;
 
     select_option(0,screen1);
-    wrefresh(stdscr);
     wrefresh(screen1);
     while(1)
     {
@@ -667,14 +667,14 @@ int strat_window()
             delwin(screen1);
             return -1;
         }
-        if(ch==KEY_DOWN)
+        if(ch=='s')
         {
             if(i!=2)
             {
                 select_option(++i,screen1);
             }
         }
-        if(ch==KEY_UP)
+        if(ch=='w')
         {
             if(i!=0)
             {
@@ -976,9 +976,97 @@ void leaderboard()
         mvwprintw(screen, 7, 1, "Press any key to continue...");
         wrefresh(screen);
         wgetch(screen);
+        delwin(screen);
         return ;
     }
     display_leaderboard(screen, current_leaderboard, num_entries);
-
+    delwin(screen);
     return;
 }   
+char aleger_dificultate[3][10]={"EASY","MEDIUM","HARD"};
+void print_dificulty_options(int i,WINDOW* loc_win)
+{
+    
+    werase(loc_win);
+
+    mvwprintw(loc_win,1,1,"Press *q* to exit");
+    mvwprintw(loc_win,2,1,"Press *r* to enter");
+    mvwprintw(loc_win,3,1,"choose dificulty");
+    
+    mvwprintw(loc_win,4,1,aleger_dificultate[0]);
+    mvwprintw(loc_win,5,1,aleger_dificultate[1]);
+    mvwprintw(loc_win,6,1,aleger_dificultate[2]);
+    mvwprintw(loc_win,7,1,"the harder it ");
+    mvwprintw(loc_win,8,1,"is the more points");
+
+
+    box(loc_win,0,0);
+
+    wattron(loc_win,A_REVERSE);
+    mvwprintw(loc_win,i+4,1,aleger_dificultate[i]);
+    wattroff(loc_win,A_REVERSE);
+    wrefresh(loc_win);
+}
+void select_dificulty(dificultate_t* dif)
+{
+    noecho();
+    curs_set(false);
+    keypad(stdscr,true);
+    int i=0;
+    char c;
+    WINDOW* win;
+    win=newwin(ROWS,COLLUMS,0,0);
+    if(win==NULL)
+    {
+        printf("eroare la window dificulty select");
+        endwin();
+        exit(-1);
+    }
+    print_dificulty_options(0,win);
+    while(1)
+    {
+        c=wgetch(win);
+        if(c=='q')
+        {
+            delwin(win);
+            endwin();
+            exit(-1);
+        }
+        if(c=='r')
+        {
+            break;
+        }
+        if((c=='w')&&(i!=0))
+        {
+            print_dificulty_options(--i,win);
+        }
+        if((c=='s')&&(i!=2))
+        {
+            print_dificulty_options(++i,win);
+        }
+    }
+    switch(i)
+    {
+        case 0:
+        {
+            dif->nr_fantome=2;
+            dif->prc_puncte=12;
+            dif->prc_ziduri=94;
+            break;
+        }
+        case 1:
+        {
+            dif->nr_fantome=3;
+            dif->prc_puncte=20;
+            dif->prc_ziduri=96;
+            break;
+        }
+        case 2:
+        {
+            dif->nr_fantome=5;
+            dif->prc_puncte=25;
+            dif->prc_ziduri=96;
+            break;
+        }
+    }
+}
